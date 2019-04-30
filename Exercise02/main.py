@@ -26,73 +26,64 @@ def dataset_reader(folder, data_set="train"):
         return x_data, labels
 
 #Problem 2.2 Numpy implementation
-def create_mini_batches(X, y, batch_size):
-    mini_batches = []
-    data = np.hstack((X, y))
-    np.random.shuffle(data)
-    n_minibatches = data.shape[0] // batch_size
-    i = 0
-    for i in range(n_minibatches + 1):
-        mini_batch = data[i * batch_size:(i + 1) * batch_size,:]
-        X_mini = mini_batch[:, :-1]
-        Y_mini = mini_batch[:, -1].reshape((-1, 1))
-        mini_batches.append((X_mini, Y_mini))
-    if data.shape[0] % batch_size != 0:
-        mini_batch = data[i * batch_size:data.shape[0]]
-        X_mini = mini_batch[:, :-1]
-        Y_mini = mini_batch[:, -1].reshape((-1, 1))
-        mini_batches.append((X_mini, Y_mini))
-    return mini_batches
+def sigmoid(x):
+    x = np.clip(x, -500, 300)
+    x = 1. / (1.+ np.exp(-x))
+    return x
 
-def sigmoid(x, derivative=False):
-    x = np.clip(x, -500, 500)
-    sigm = 1. / (1.+ np.exp(-x))
-    if derivative:
-        return sigm * (1. - sigm)
-    return sigm
+def random_mini_batches(train_x, train_labels, batch_size):
+    length = len(train_x)
+    perm = np.random.permutation(length)
+    X = train_x[perm]
+    y = train_labels[perm]
+    X_batches = np.array_split(X, length//batch_size)
+    y_batches = np.array_split(y, length//batch_size)
+    return zip(X_batches, y_batches)
 
-def epoch_update(train_x, train_labels, w0, batch_size, learning_rate):
-    w = w0
-    train_batches = create_mini_batches(train_x, train_labels, batch_size)
-
-    for X_batch, y_batch in train_batches:
+def epoch_calc(train_x, train_labels, w, batch_size, learning_rate):
+    mini_batches = random_mini_batches(train_x, train_labels, batch_size)
+    for X_batch, y_batch in mini_batches:
         grad = 0
-        for x, y in zip(X_batch, y_batch):
-            sigxw = sigmoid(np.dot(x, w))
-            grad += (sigxw - y) * sigmoid(x,True) * x
+        for X, y in zip(X_batch, y_batch):
+            sig = sigmoid(np.dot(X, w))
+            grad += (sig - y) * sig * (1-sig) * X
+        # average the gradient
         grad /= len(y_batch)
         w -= learning_rate * grad
     return w
 
-def test(test_x, test_labels, w):
-    predictions = [sigmoid(np.dot(x, w)) for x in test_x]
-    predictions_discrete = [np.rint(pred) for pred in predictions]
-
+def loss_accuracy_func(test_x, test_labels, w):
+    preds = [sigmoid(np.dot(x, w)) for x in test_x]
+    pred_values = [np.rint(pred) for pred in preds]
     n = len(test_labels)
-    mean_square_loss = sum([(pred - y) ** 2 for pred, y in zip(predictions, test_labels)]) / n
-    accuracy = sum([pred == y for pred, y in zip(predictions_discrete, test_labels)]) / n
-
-    return mean_square_loss, accuracy
+    square_loss = sum([(pred - y) ** 2 for pred, y in zip(preds, test_labels)]) / n
+    accuracy = sum([pred == y for pred, y in zip(pred_values, test_labels)]) / n
+    return square_loss, accuracy
 
 if __name__ == '__main__':
     #load data set
     train_x, train_labels = dataset_reader("DATA")
     dev_x, dev_labels = dataset_reader("DATA","dev")
-    test_x, test_labels = dataset_reader("DATA", "test")
+    test_x, test_labels = dataset_reader("DATA","test")
 
-    np.random.seed(seed=5)
-    w0 = np.random.normal(0,1,(101))
-
+    np.random.seed(seed=9)
+    w = np.random.normal(0, 1, (101))
+    #epochs = 100
+    print("############################ Epoch 100 ####################################")
+    w100 = w
     for i in range(100):
-        w = epoch_update(train_x, train_labels, w0, 10, 0.01)
+        w100 = epoch_calc(train_x, train_labels, w100, 10, 0.01)
+    loss, accuracy = loss_accuracy_func(dev_x, dev_labels, w100)
+    print("dev dataset loss : ",loss," and accuray : ", accuracy)
+    loss, accuracy = loss_accuracy_func(test_x, test_labels, w100)
+    print("test dataset loss : ", loss, " and accuray : ", accuracy)
 
-    loss, accuracy = test(dev_x, dev_labels, w)
-    print("Loss on dev after {} epochs: {}, accuracy: {}".format(100, loss, accuracy))
-
-
-
-
-
-
-
-
+    # epochs = 500
+    print("############################ Epoch 500 ####################################")
+    w500 = w
+    for i in range(500):
+        w500 = epoch_calc(train_x, train_labels, w500, 10, 0.01)
+    loss, accuracy = loss_accuracy_func(dev_x, dev_labels, w500)
+    print("dev dataset loss : ", loss, " and accuray : ", accuracy)
+    loss, accuracy = loss_accuracy_func(test_x, test_labels, w500)
+    print("test dataset loss : ", loss, " and accuray : ", accuracy)
