@@ -87,3 +87,4 @@ if __name__ == '__main__':
     print("dev dataset loss : ", loss, " and accuray : ", accuracy)
     loss, accuracy = loss_accuracy_func(test_x, test_labels, w500)
     print("test dataset loss : ", loss, " and accuray : ", accuracy)
+
