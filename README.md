@@ -1,3 +1,3 @@
-# DL4NLP
+# Deep Learning for Nature Language Process
 
-### DL4NLP TU Darmstadt SS2019 homework exercise and shared_task
+### TU Darmstadt SS2019 DL4NLP homework exercise and shared_task
